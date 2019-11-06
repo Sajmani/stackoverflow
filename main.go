@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
 	"io"
 	"log"
 	"math"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -22,8 +23,8 @@ func main() {
 	defer f.Close()
 	r := csv.NewReader(f)
 	var (
-		schema                      map[string]int
-		all, gcp, aws, azure, cloud langCounts
+		schema map[string]int
+		counts = make(map[string]map[string]int)
 	)
 	for {
 		rec, err := r.Read()
@@ -43,89 +44,49 @@ func main() {
 		if ent && rec[schema["OrgSize"]] != "10,000 or more employees" {
 			continue
 		}
-		all.N++
-		var Go, Java bool
-		langs := strings.Split(rec[schema["LanguageWorkedWith"]], ";")
-		for _, lang := range langs {
-			switch lang {
-			case "Go":
-				all.Go++
-				Go = true
-			case "Java":
-				all.Java++
-				Java = true
+
+		techs := make(map[string]bool)
+		addTechs := func(key string) {
+			for _, tech := range strings.Split(rec[schema[key]], ";") {
+				techs[tech] = true
 			}
 		}
-		plats := strings.Split(rec[schema["PlatformWorkedWith"]], ";")
-		var Cloud bool
-		for _, plat := range plats {
-			switch plat {
-			case "Google Cloud Platform":
-				gcp.N++
-				Cloud = true
-				if Go {
-					gcp.Go++
+		addTechs("LanguageWorkedWith")
+		addTechs("PlatformWorkedWith")
+		addTechs("DevEnviron")
+		for t1 := range techs {
+			for t2 := range techs {
+				if t2 < t1 {
+					continue
 				}
-				if Java {
-					gcp.Java++
+				if counts[t1] == nil {
+					counts[t1] = make(map[string]int)
 				}
-			case "AWS":
-				aws.N++
-				Cloud = true
-				if Go {
-					aws.Go++
-				}
-				if Java {
-					aws.Java++
-				}
-			case "Microsoft Azure":
-				azure.N++
-				Cloud = true
-				if Go {
-					azure.Go++
-				}
-				if Java {
-					azure.Java++
-				}
-			}
-		}
-		if Cloud {
-			cloud.N++
-			if Go {
-				cloud.Go++
-			}
-			if Java {
-				cloud.Java++
+				counts[t1][t2]++
 			}
 		}
 	}
-	fmt.Printf("all %s\n", all.String(all.N))
-	fmt.Printf("gcp %s\n", gcp.String(all.N))
-	fmt.Printf("aws %s\n", aws.String(all.N))
-	fmt.Printf("azure %s\n", azure.String(all.N))
-	fmt.Printf("cloud %s\n", cloud.String(all.N))
 
-	fmt.Printf("P(GCP|Go) = P(GCP,Go)/P(Go) = %.1f/%.1f%% = %.1f%% vs P(GCP|Java) = %.1f%% vs P(GCP) = %.1f%%\n",
-		pct(gcp.Go, all.N), pct(all.Go, all.N), pct(gcp.Go, all.Go), pct(gcp.Java, all.Java), pct(gcp.N, all.N))
-	fmt.Printf("P(AWS|Go) = P(AWS,Go)/P(Go) = %.1f/%.1f%% = %.1f%% vs P(AWS|Java) = %.1f%% vs P(AWS) = %.1f%%\n",
-		pct(aws.Go, all.N), pct(all.Go, all.N), pct(aws.Go, all.Go), pct(aws.Java, all.Java), pct(aws.N, all.N))
-	fmt.Printf("P(Azure|Go) = P(Azure,Go)/P(Go) = %.1f/%.1f%% = %.1f%% vs P(Azure|Java) = %.1f%% vs P(Azure) = %.1f%%\n",
-		pct(azure.Go, all.N), pct(all.Go, all.N), pct(azure.Go, all.Go), pct(azure.Java, all.Java), pct(azure.N, all.N))
-	fmt.Printf("P(Cloud|Go) = P(Cloud,Go)/P(Go) = %.1f/%.1f%% = %.1f%% vs P(Cloud|Java) = %.1f%% vs P(Cloud) = %.1f%%\n",
-		pct(cloud.Go, all.N), pct(all.Go, all.N), pct(cloud.Go, all.Go), pct(cloud.Java, all.Java), pct(cloud.N, all.N))
-}
+	var techs []string
+	for t1 := range counts {
+		techs = append(techs, t1)
+	}
+	sort.Strings(techs)
 
-type langCounts struct {
-	N    int
-	Go   int
-	Java int
-}
-
-func (c langCounts) String(n int) string {
-	return fmt.Sprintf("Total %d (%.1f%%)  Go %d (%.1f%% of Total, %.1f%% of all)  Java %d (%.1f%% of Total, %.1f%% of all)",
-		c.N, pct(c.N, n),
-		c.Go, pct(c.Go, c.N), pct(c.Go, n),
-		c.Java, pct(c.Java, c.N), pct(c.Java, n))
+	w := csv.NewWriter(os.Stdout)
+	w.Write(append([]string{"Tech"}, techs...))
+	for _, t1 := range techs {
+		rec := make([]string, len(techs)+1)
+		rec[0] = t1
+		for i, t2 := range techs {
+			k1, k2 := t1, t2
+			if k2 < k1 {
+				k1, k2 = k2, k1
+			}
+			rec[i+1] = strconv.Itoa(counts[k1][k2])
+		}
+		w.Write(rec)
+	}
 }
 
 func pct(a, b int) float64 {
