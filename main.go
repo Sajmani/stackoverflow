@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"io"
 	"log"
-	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -12,10 +11,6 @@ import (
 )
 
 func main() {
-	ent := false
-	if len(os.Args) > 1 && os.Args[1] == "ent" {
-		ent = true // restrict to enterprise users
-	}
 	f, err := os.Open("/Users/sameer/Downloads/developer_survey_2019/survey_results_public.csv")
 	if err != nil {
 		log.Fatal(err)
@@ -41,10 +36,6 @@ func main() {
 			}
 			continue
 		}
-		if ent && rec[schema["OrgSize"]] != "10,000 or more employees" {
-			continue
-		}
-
 		techSet := make(map[string]bool)
 		addTechs := func(key string) {
 			for _, tech := range strings.Split(rec[schema[key]], ";") {
@@ -54,17 +45,31 @@ func main() {
 		addTechs("LanguageWorkedWith")
 		addTechs("PlatformWorkedWith")
 		addTechs("DevEnviron")
+		if techSet["AWS"] || techSet["Microsoft Azure"] || techSet["Google Cloud Platform"] {
+			techSet["ANY CLOUD"] = true
+		}
+		if rec[schema["OrgSize"]] == "10,000 or more employees" {
+			techSet["ANY ENTERPRISE"] = true
+		}
+		techSet["ANY"] = true
 		var techs []string
 		for tech := range techSet {
 			techs = append(techs, tech)
 		}
 		sort.Strings(techs)
+
+		inc := func(k1, k2 string) {
+			if k2 < k1 {
+				k1, k2 = k2, k1
+			}
+			if counts[k1] == nil {
+				counts[k1] = make(map[string]int)
+			}
+			counts[k1][k2]++
+		}
 		for i, t1 := range techs {
 			for _, t2 := range techs[i:] {
-				if counts[t1] == nil {
-					counts[t1] = make(map[string]int)
-				}
-				counts[t1][t2]++
+				inc(t1, t2)
 			}
 		}
 	}
@@ -97,8 +102,4 @@ func main() {
 		}
 		w.Write(rec)
 	}
-}
-
-func pct(a, b int) float64 {
-	return math.Round(1000*float64(a)/float64(b)) / 10
 }
