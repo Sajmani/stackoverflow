@@ -45,20 +45,22 @@ func main() {
 			continue
 		}
 
-		techs := make(map[string]bool)
+		techSet := make(map[string]bool)
 		addTechs := func(key string) {
 			for _, tech := range strings.Split(rec[schema[key]], ";") {
-				techs[tech] = true
+				techSet[tech] = true
 			}
 		}
 		addTechs("LanguageWorkedWith")
 		addTechs("PlatformWorkedWith")
 		addTechs("DevEnviron")
-		for t1 := range techs {
-			for t2 := range techs {
-				if t2 < t1 {
-					continue
-				}
+		var techs []string
+		for tech := range techSet {
+			techs = append(techs, tech)
+		}
+		sort.Strings(techs)
+		for i, t1 := range techs {
+			for _, t2 := range techs[i:] {
 				if counts[t1] == nil {
 					counts[t1] = make(map[string]int)
 				}
@@ -67,13 +69,21 @@ func main() {
 		}
 	}
 
+	techSet := make(map[string]bool)
+	for t1, m := range counts {
+		techSet[t1] = true
+		for t2 := range m {
+			techSet[t2] = true
+		}
+	}
 	var techs []string
-	for t1 := range counts {
-		techs = append(techs, t1)
+	for tech := range techSet {
+		techs = append(techs, tech)
 	}
 	sort.Strings(techs)
 
 	w := csv.NewWriter(os.Stdout)
+	defer w.Flush()
 	w.Write(append([]string{"Tech"}, techs...))
 	for _, t1 := range techs {
 		rec := make([]string, len(techs)+1)
