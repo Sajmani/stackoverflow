@@ -59,6 +59,9 @@ func main() {
 		if rec[schema[keys[year].orgSize]] == "10,000 or more employees" {
 			techSet["ANY ENTERPRISE"] = true
 		}
+		if techSet["ANY CLOUD"] && techSet["ANY ENTERPRISE"] {
+			techSet["ANY CLOUD AND ENTERPRISE"] = true
+		}
 		techSet["ANY"] = true
 		var techs []string
 		for tech := range techSet {
