@@ -5,13 +5,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	f, err := os.Open("/Users/sameer/Downloads/developer_survey_2019/survey_results_public.csv")
+	path := "/Users/sameer/Downloads/developer_survey_2019/survey_results_public.csv"
+	f, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,20 +38,29 @@ func main() {
 			}
 			continue
 		}
+		keys := make(map[string]keyset)
+		keys["2019"] = keyset{lang: "LanguageWorkedWith", plat: "PlatformWorkedWith", ed: "DevEnviron", orgSize: "OrgSize"}
+		keys["2018"] = keyset{lang: "LanguageWorkedWith", plat: "PlatformWorkedWith", ed: "IDE", orgSize: "CompanySize"}
+		keys["2017"] = keyset{lang: "HaveWorkedLanguage", plat: "HaveWorkedPlatform", ed: "IDE", orgSize: "CompanySize"}
+		year := yearFromPath(path)
 		techSet := make(map[string]bool)
 		addTechs := func(key string) {
 			for _, tech := range strings.Split(rec[schema[key]], ";") {
+				tech = strings.TrimSpace(tech)
 				techSet[tech] = true
 			}
 		}
-		addTechs("LanguageWorkedWith")
-		addTechs("PlatformWorkedWith")
-		addTechs("DevEnviron")
-		if techSet["AWS"] || techSet["Microsoft Azure"] || techSet["Google Cloud Platform"] {
+		addTechs(keys[year].lang)
+		addTechs(keys[year].plat)
+		addTechs(keys[year].ed)
+		if techSet["AWS"] || techSet["Microsoft Azure"] || techSet["Google Cloud Platform"] || techSet["Amazon Web Services (AWS)"] || techSet["Google Cloud Platform/App Engine"] || techSet["Azure"] {
 			techSet["ANY CLOUD"] = true
 		}
-		if rec[schema["OrgSize"]] == "10,000 or more employees" {
+		if rec[schema[keys[year].orgSize]] == "10,000 or more employees" {
 			techSet["ANY ENTERPRISE"] = true
+		}
+		if techSet["ANY CLOUD"] && techSet["ANY ENTERPRISE"] {
+			techSet["ANY CLOUD AND ENTERPRISE"] = true
 		}
 		techSet["ANY"] = true
 		var techs []string
@@ -102,4 +113,21 @@ func main() {
 		}
 		w.Write(rec)
 	}
+}
+
+type keyset struct {
+	lang    string
+	plat    string
+	ed      string
+	orgSize string
+}
+
+func yearFromPath(path string) string {
+	// expects the default SO path structure (.../developer_survey_YYYY/survey_results_public.csv)
+	re := regexp.MustCompile(`developer_survey_(\d+)`)
+	matches := re.FindStringSubmatch(path)
+	if matches == nil {
+		return "2019"
+	}
+	return matches[1]
 }
