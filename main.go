@@ -12,7 +12,8 @@ import (
 )
 
 func main() {
-	path := "/Users/sameer/Downloads/developer_survey_2019/survey_results_public.csv"
+	path := "data/2020.csv"
+	year := yearFromPath(path)
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -39,10 +40,11 @@ func main() {
 			continue
 		}
 		keys := make(map[string]keyset)
+		keys["2020"] = keyset{lang: "LanguageWorkedWith", plat: "PlatformWorkedWith", orgSize: "OrgSize"}
 		keys["2019"] = keyset{lang: "LanguageWorkedWith", plat: "PlatformWorkedWith", ed: "DevEnviron", orgSize: "OrgSize"}
 		keys["2018"] = keyset{lang: "LanguageWorkedWith", plat: "PlatformWorkedWith", ed: "IDE", orgSize: "CompanySize"}
 		keys["2017"] = keyset{lang: "HaveWorkedLanguage", plat: "HaveWorkedPlatform", ed: "IDE", orgSize: "CompanySize"}
-		year := yearFromPath(path)
+
 		techSet := make(map[string]bool)
 		addTechs := func(key string) {
 			for _, tech := range strings.Split(rec[schema[key]], ";") {
@@ -52,11 +54,12 @@ func main() {
 		}
 		addTechs(keys[year].lang)
 		addTechs(keys[year].plat)
-		addTechs(keys[year].ed)
+		// addTechs(keys[year].ed)
 		if techSet["AWS"] || techSet["Microsoft Azure"] || techSet["Google Cloud Platform"] || techSet["Amazon Web Services (AWS)"] || techSet["Google Cloud Platform/App Engine"] || techSet["Azure"] {
 			techSet["ANY CLOUD"] = true
 		}
-		if rec[schema[keys[year].orgSize]] == "10,000 or more employees" {
+		orgSize := rec[schema[keys[year].orgSize]]
+		if orgSize == "10,000 or more employees" || orgSize == "1,000 to 4,999 employees" || orgSize == "5,000 to 9,999 employees" {
 			techSet["ANY ENTERPRISE"] = true
 		}
 		if techSet["ANY CLOUD"] && techSet["ANY ENTERPRISE"] {
@@ -123,11 +126,11 @@ type keyset struct {
 }
 
 func yearFromPath(path string) string {
-	// expects the default SO path structure (.../developer_survey_YYYY/survey_results_public.csv)
-	re := regexp.MustCompile(`developer_survey_(\d+)`)
+	// expects files in data/YYYY.csv
+	re := regexp.MustCompile(`data/(\d+)\.csv`)
 	matches := re.FindStringSubmatch(path)
 	if matches == nil {
-		return "2019"
+		return "2020"
 	}
 	return matches[1]
 }
