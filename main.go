@@ -10,8 +10,16 @@ import (
 	"strings"
 )
 
+// 2021 columns:
+// ResponseId,MainBranch,Employment,Country,US_State,UK_Country,EdLevel,Age1stCode,LearnCode,YearsCode,YearsCodePro,DevType,OrgSize,
+// Currency,CompTotal,CompFreq,LanguageHaveWorkedWith,LanguageWantToWorkWith,DatabaseHaveWorkedWith,DatabaseWantToWorkWith,
+// PlatformHaveWorkedWith,PlatformWantToWorkWith,WebframeHaveWorkedWith,WebframeWantToWorkWith,MiscTechHaveWorkedWith,MiscTechWantToWorkWith,
+// ToolsTechHaveWorkedWith,ToolsTechWantToWorkWith,NEWCollabToolsHaveWorkedWith,NEWCollabToolsWantToWorkWith,OpSys,NEWStuck,NEWSOSites,
+// SOVisitFreq,SOAccount,SOPartFreq,SOComm,NEWOtherComms,Age,Gender,Trans,Sexuality,Ethnicity,Accessibility,MentalHealth,
+// SurveyLength,SurveyEase,ConvertedCompYearly
+
 func main() {
-	f, err := os.Open("/Users/sameer/Downloads/developer_survey_2019/survey_results_public.csv")
+	f, err := os.Open("/Users/sameer/Downloads/stack-overflow-developer-survey-2021/survey_results_public.csv")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,9 +50,13 @@ func main() {
 				techSet[tech] = true
 			}
 		}
-		addTechs("LanguageWorkedWith")
-		addTechs("PlatformWorkedWith")
-		addTechs("DevEnviron")
+		addTechs("LanguageHaveWorkedWith")
+		addTechs("DatabaseHaveWorkedWith")
+		addTechs("PlatformHaveWorkedWith")
+		addTechs("WebframeHaveWorkedWith")
+		addTechs("MiscTechHaveWorkedWith")
+		addTechs("ToolsTechHaveWorkedWith")
+		addTechs("NEWCollabToolsHaveWorkedWith")
 		if techSet["AWS"] || techSet["Microsoft Azure"] || techSet["Google Cloud Platform"] {
 			techSet["ANY CLOUD"] = true
 		}
